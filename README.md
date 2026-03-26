@@ -1,93 +1,115 @@
+# AI Resume Matcher
 
-# 🧠 AI-Powered Resume Matcher using TF-IDF
+> TF-IDF + cosine similarity pipeline that scores and ranks resumes against a job description — because hiring shouldn't require reading 200 PDFs manually.
 
-This project is an end-to-end implementation of an **AI-powered resume matching system**, designed to help recruiters automatically rank candidate resumes based on how well they match a given job description.
-
-## 🚀 Overview
-
-The system uses **TF-IDF vectorization** and **cosine similarity** to compare resumes with a recruiter’s job description (JD). It outputs the **Top 10 most relevant candidates**, complete with match scores, names, and email addresses.
-
----
-
-## 📁 Dataset
-
-- Source: [Sachinkelenjaguri/Resume_dataset](https://huggingface.co/datasets/Sachinkelenjaguri/Resume_dataset)
-- Format: Resumes labeled by job categories
-- Cleaned and enriched with:
-  - Resume ID
-  - Fake Name and Email (via Faker)
-  - Resume Length
-  - Preprocessed Resume Text
+[![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://python.org)
+[![Scikit-learn](https://img.shields.io/badge/scikit--learn-TF--IDF-F7931E?logo=scikitlearn)](https://scikit-learn.org)
+[![Pandas](https://img.shields.io/badge/Pandas-data-150458?logo=pandas)](https://pandas.pydata.org)
+[![NLTK](https://img.shields.io/badge/NLTK-NLP-4CAF50)](https://www.nltk.org)
+[![HuggingFace](https://img.shields.io/badge/HuggingFace-Dataset-FFD21E?logo=huggingface&logoColor=black)](https://huggingface.co/datasets)
 
 ---
 
-## 🛠️ Features
+## What This Does
 
-✅ Load and explore real resume data  
-✅ Preprocess resumes (cleaning, lemmatization, stopword removal)  
-✅ Add fake metadata for realism  
-✅ Vectorize resumes using **TF-IDF**  
-✅ Input dynamic job descriptions  
-✅ Match resumes to JD using **cosine similarity**  
-✅ Return Top 10 candidates with match scores  
-✅ Export results as CSV  
-✅ Visualize scores with bar plots
+Takes a job description as input, vectorizes it alongside a dataset of real resumes using TF-IDF, and ranks candidates by cosine similarity score. Returns the top 10 matches with their scores.
+
+The core idea: resumes and job descriptions are bags of domain-specific vocabulary. TF-IDF weights rare, meaningful terms higher than common ones — so "LangChain" in both the JD and resume scores more than "experience" appearing everywhere.
 
 ---
 
-## 📊 Example Output
+## How It Works
 
 ```
-| Resume ID | Candidate Name   | Email               | Match_Score (%) |
-|-----------|------------------|---------------------|-----------------|
-| R0182     | John Smith       | john@example.com    | 82.45           |
-| R0451     | Jane Doe         | jane@example.com    | 78.23           |
+Load Dataset (HuggingFace → Pandas DataFrame)
+    → Text Preprocessing
+        - Lowercase
+        - Remove punctuation / stopwords
+        - Lemmatization (NLTK WordNetLemmatizer)
+    → TF-IDF Vectorization (sklearn TfidfVectorizer)
+        - Fit on full resume corpus
+        - Transform job description + all resumes
+    → Cosine Similarity
+        - Score each resume against JD vector
+    → Rank top-10 candidates
+    → Visualize score distribution (Matplotlib)
 ```
 
 ---
 
-## 🧪 Technologies Used
+## Dataset
 
-- Python 🐍
-- Pandas, NumPy
-- Matplotlib
-- NLTK (Text cleaning)
-- Scikit-learn (TF-IDF & cosine similarity)
-- Faker (fake names & emails)
-- Hugging Face Datasets
+**[Sachinkelenjaguri/Resume_dataset](https://huggingface.co/datasets/Sachinkelenjaguri/Resume_dataset)** from HuggingFace
+
+Loaded directly via `datasets` library — no manual download needed. Contains labeled resume text across multiple job categories.
+
+The `Faker` library is used to generate synthetic candidate names and metadata for demo purposes, keeping PII out of the pipeline.
 
 ---
 
-## 💡 How to Use
+## Tech Stack
 
-1. Clone the repo or open the `.ipynb` notebook in Colab
-2. Install dependencies:
-    ```
-    pip install datasets faker nltk
-    ```
-3. Run all cells
-4. Change the `job_description` input to test different roles
-5. View the Top 10 ranked resumes and their match scores
-
----
-
-## 📦 Future Enhancements
-
-- Dynamic resume upload & comparison
-- Streamlit / Django-based frontend
-- Semantic search with BERT / Sentence Transformers
-- Skill extraction and filtering
+| Component | Library |
+|-----------|---------|
+| Data handling | Pandas, NumPy |
+| Text preprocessing | NLTK (stopwords, lemmatization) |
+| Vectorization | Scikit-learn TfidfVectorizer |
+| Similarity scoring | Scikit-learn cosine_similarity |
+| Dataset | HuggingFace `datasets` |
+| Synthetic data | Faker |
+| Visualization | Matplotlib |
 
 ---
 
-## 🤝 Credits
+## Setup
 
-Project built by **Jibin Kunjumon** 👨‍💻  
-Built as part of my AI learning journey, with assistance from AI tools.   
-Dataset by [Sachinkelenjaguri on Hugging Face](https://huggingface.co/datasets/Sachinkelenjaguri/Resume_dataset)
+```bash
+git clone https://github.com/jibz33on/AI-Resume-Matcher
+cd AI-Resume-Matcher
+
+pip install -r requirements.txt
+python -m nltk.downloader stopwords wordnet
+```
 
 ---
 
-## 📜 License
+## Usage
 
-This project is for educational and portfolio purposes only.
+```python
+from matcher import ResumeMatcher
+
+matcher = ResumeMatcher()
+matcher.load_dataset()  # pulls from HuggingFace
+
+job_description = """
+We're looking for an AI Engineer with experience in LangChain, RAG pipelines,
+Python, and deploying LLM-based systems to production.
+"""
+
+top_matches = matcher.rank(job_description, top_k=10)
+print(top_matches[['candidate_name', 'similarity_score', 'resume_preview']])
+```
+
+Output:
+
+```
+   candidate_name  similarity_score  resume_preview
+0    Alex Chen          0.847        "5 years Python, built RAG system..."
+1    Jordan Kim         0.812        "LangChain, FastAPI, OpenAI APIs..."
+...
+```
+
+---
+
+## Why TF-IDF (and When It's Not Enough)
+
+TF-IDF works well for keyword-heavy matching — job descriptions and resumes tend to use consistent domain vocabulary. It's fast, interpretable, and needs no GPU.
+
+The limitation: it's lexical, not semantic. "Retrieval-augmented generation" and "RAG" score as different terms. For production-grade matching, you'd layer in a bi-encoder (e.g., `sentence-transformers/all-MiniLM-L6-v2`) for semantic similarity on top of the TF-IDF shortlist. This repo is the foundation for that.
+
+---
+
+## Author
+
+**Jibin Kunjumon** — AI Engineer  
+[GitHub](https://github.com/jibz33on) · [LinkedIn](https://linkedin.com/in/jibin-kunjumon)
